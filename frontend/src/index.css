@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #ffffff;
+  background: #020617;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% 10%, rgba(34, 197, 94, 0.24), transparent 24%),
+    radial-gradient(circle at 92% 5%, rgba(245, 158, 11, 0.26), transparent 25%),
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(59, 130, 246, 0.18),
+      transparent 35%
+    ),
+    linear-gradient(135deg, #03120c 0%, #061525 40%, #020617 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.sport-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.stadium-card {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: linear-gradient(
+    145deg,
+    rgba(2, 6, 23, 0.88),
+    rgba(6, 78, 59, 0.42)
+  );
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.pitch-card {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 49%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.025) 51%
+    ),
+    linear-gradient(145deg, rgba(6, 95, 70, 0.5), rgba(2, 44, 34, 0.75));
+}
+
+.gold-text {
+  color: #facc15;
+}
+
+.green-text {
+  color: #22c55e;
+}
+
+.field-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(2, 6, 23, 0.62);
+  padding: 0.85rem 1rem;
+  font-weight: 800;
+  color: white;
+  outline: none;
+}
+
+.field-input::placeholder {
+  color: rgba(148, 163, 184, 0.62);
+}
+
+.field-input:focus {
+  border-color: rgba(250, 204, 21, 0.72);
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.1);
+}
+
+@keyframes sportzmitra-stamp-pop {
+  0% {
+    opacity: 0;
+    transform: scale(2.1) rotate(-18deg);
+    filter: blur(5px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(0.9) rotate(-12deg);
+    filter: blur(0);
+  }
+  38% {
+    transform: scale(1.08) rotate(-12deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02) rotate(-12deg);
+  }
+}
+
+.stamp-pop {
+  animation: sportzmitra-stamp-pop 1.5s ease-in-out forwards;
+}
+
+@keyframes sportzmitra-celebration-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.45) rotate(-14deg);
+    filter: blur(5px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.12) rotate(-7deg);
+    filter: blur(0);
+  }
+  34% {
+    transform: scale(0.98) rotate(-7deg);
+  }
+  82% {
+    opacity: 1;
+    transform: scale(1) rotate(-7deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08) rotate(-7deg);
+  }
+}
+
+@keyframes sportzmitra-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-8vh) rotate(0deg) scale(0.9);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(108vh) rotate(520deg) scale(1.1);
+  }
+}
+
+.celebration-pop {
+  animation: sportzmitra-celebration-pop 2.2s ease-in-out forwards;
+}
+
+.celebration-dot {
+  position: absolute;
+  top: -4vh;
+  width: 0.8rem;
+  height: 1.4rem;
+  border-radius: 0.25rem;
+  animation: sportzmitra-confetti-fall 2.2s ease-in forwards;
+}
