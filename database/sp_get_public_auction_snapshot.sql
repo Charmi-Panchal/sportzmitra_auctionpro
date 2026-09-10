@@ -18,9 +18,16 @@ BEGIN
   WHERE s.auction_id = p_auction_id;
 
   -- 2. Teams (used for teams and teamsSummary)
-  SELECT id, team_name, owner_name, logo_url, total_purse, remaining_purse, (total_purse - remaining_purse) AS used_amount 
-  FROM teams 
-  WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0;
+  SELECT 
+    t.id, 
+    t.team_name, 
+    t.owner_name, 
+    t.logo_url, 
+    (t.remaining_purse + COALESCE((SELECT SUM(sold_price) FROM players WHERE sold_team_id = t.id AND status = 'SOLD'), 0)) AS total_purse, 
+    t.remaining_purse, 
+    COALESCE((SELECT SUM(sold_price) FROM players WHERE sold_team_id = t.id AND status = 'SOLD'), 0) AS used_amount 
+  FROM teams t
+  WHERE t.auction_id = p_auction_id AND COALESCE(t.is_deleted, 0) = 0;
 
   -- 3. Sold Players
   SELECT p.*, t.team_name as sold_team_name 
@@ -43,6 +50,10 @@ BEGIN
   SELECT 
     (SELECT COUNT(*) FROM teams WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as total_teams,
     (SELECT COUNT(*) FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as total_players,
-    (SELECT SUM(status='SOLD') FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as sold_players;
+    (SELECT COALESCE(SUM(status='SOLD'), 0) FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as sold_players,
+    (SELECT COALESCE(SUM(status='UNSOLD' OR status='FINAL_UNSOLD'), 0) FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as unsold_players,
+    (SELECT COALESCE(SUM(status IN ('AVAILABLE', 'IN_AUCTION')), 0) FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as pending_players,
+    (SELECT COALESCE(SUM(remaining_purse), 0) FROM teams WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0) as total_balance,
+    (SELECT COALESCE(MAX(sold_price), 0) FROM players WHERE auction_id = p_auction_id AND COALESCE(is_deleted, 0) = 0 AND status='SOLD') as highest_bid;
 END$$
 DELIMITER ;

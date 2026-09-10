@@ -73,17 +73,20 @@ export default function TeamsPage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [maxBidMap, setMaxBidMap] = useState({});
 
   async function load() {
     try {
-      const [dash, teamRes, recentRes] = await Promise.all([
+      const [dash, teamRes, recentRes, mbRes] = await Promise.all([
         api.get(`/auctions/${auctionId}/dashboard`),
         api.get(`/teams/auction/${auctionId}`),
         api.get(`/teams/recent`).catch(() => ({ data: [] })),
+        api.get(`/live/${auctionId}/max-bid`).catch(() => ({ data: { maxBidMap: {} } })),
       ]);
       setAuction(dash.data.auction);
       setTeams(teamRes.data || []);
       setRecentTeams(recentRes.data || []);
+      setMaxBidMap(mbRes.data?.maxBidMap || {});
     } catch (err) {
       console.error("Failed to load auction context", err);
     } finally {
@@ -487,6 +490,8 @@ export default function TeamsPage() {
                     : 0;
 
                 const defaultLogo = DEFAULT_LOGOS[index % DEFAULT_LOGOS.length];
+                const tmb = maxBidMap[team.id];
+                const maxBidVal = tmb?.max_bid ?? null;
 
                 return (
                   <div
@@ -543,9 +548,21 @@ export default function TeamsPage() {
                       </div>
                     </div>
 
-                    {/* Purse */}
-                    <div className="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">
-                      ₹ {formatAmount(team.remaining_purse ?? team.total_purse)}
+                    {/* Purse + Max Bid */}
+                    <div className="mt-4">
+                      <div className="text-2xl font-extrabold tracking-tight text-slate-900">
+                        ₹ {formatAmount(team.remaining_purse ?? team.total_purse)}
+                      </div>
+                      {maxBidVal !== null && (
+                        <div className={`mt-1.5 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-black ${
+                          maxBidVal === 0
+                            ? "bg-red-50 border border-red-200 text-red-600"
+                            : "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                        }`}>
+                          <span className="uppercase tracking-wider text-[10px]">Max Bid</span>
+                          <span>{maxBidVal === 0 ? "LOCKED" : `₹${formatAmount(maxBidVal)}`}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Players & Limit */}

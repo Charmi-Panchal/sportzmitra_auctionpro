@@ -34,6 +34,7 @@ export default function PublicLiveView() {
   const { publicSlug } = useParams();
   const [auction, setAuction] = useState(null);
   const [state, setState] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [celebration, setCelebration] = useState(null);
 
@@ -53,6 +54,7 @@ export default function PublicLiveView() {
     try {
       setLoading(true);
       const response = await api.get(`/public/auction/${publicSlug}`);
+      setSnapshot(response.data);
       setAuction(response.data.auction || null);
       setState(response.data.state || null);
     } catch (error) {
@@ -73,6 +75,7 @@ export default function PublicLiveView() {
 
     const handleSnapshotUpdated = (payload) => {
       if (payload?.auction?.id === auction.id || payload?.auctionId === auction.id) {
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
         if (payload.state) setState(payload.state);
       }
@@ -89,6 +92,7 @@ export default function PublicLiveView() {
           return payload.state || prev;
         });
         setTimeout(() => setCelebration(null), 2500);
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
       }
     };
@@ -97,6 +101,7 @@ export default function PublicLiveView() {
       if (payload?.auction?.id === auction.id || payload?.auctionId === auction.id) {
         setCelebration({ type: "UNSOLD" });
         setTimeout(() => setCelebration(null), 2000);
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
         if (payload.state) setState(payload.state);
       }
@@ -127,12 +132,17 @@ export default function PublicLiveView() {
   const winningTeam = state?.highest_team_name || "STRIKERS";
   const winningTeamLogo = state?.highest_team_logo || auction?.highest_team_logo;
 
-  const teams = (auction?.teams?.length ? auction.teams : DEFAULT_TEAMS).map((t, i) => ({
+  const teams = (snapshot?.teams?.length ? snapshot.teams : DEFAULT_TEAMS).map((t, i) => ({
     ...t,
     accent: TEAM_ACCENTS[i % TEAM_ACCENTS.length],
     resolvedLogo: t.logo_url ? getImageUrl(t.logo_url) : dicebearLogo(t.team_name),
     displayPurse: t.remaining_purse ?? t.remaining_budget ?? 0,
   }));
+
+  const soldCount = snapshot?.soldPlayers?.length ?? 0;
+  const unsoldCount = snapshot?.unsoldPlayers?.length ?? 0;
+  const pendingCount = snapshot?.pendingPlayers?.length ?? 0;
+  const totalSpending = snapshot?.teamsSummary?.reduce((acc, t) => acc + Number(t.used_amount || 0), 0) ?? 0;
 
   const playerPhoto = currentPlayer?.photo_url
     ? getImageUrl(currentPlayer.photo_url)
@@ -249,9 +259,9 @@ export default function PublicLiveView() {
           {/* Statistics Dashboard */}
           <div className="flex flex-col justify-between rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all hover:shadow-md md:col-span-2 lg:col-span-3">
             <div className="space-y-1">
-              <StatRow label="Players Sold" value={auction?.sold_count ?? 128} />
-              <StatRow label="Unsold Players" value={auction?.unsold_count ?? 42} />
-              <StatRow label="Pending Players" value={auction?.pending_count ?? 78} last />
+              <StatRow label="Players Sold" value={soldCount} />
+              <StatRow label="Unsold Players" value={unsoldCount} />
+              <StatRow label="Pending Players" value={pendingCount} last />
             </div>
 
             <div className="mt-4 rounded-2xl bg-[#e91e63]/5 p-4 border border-[#e91e63]/10">
@@ -259,7 +269,7 @@ export default function PublicLiveView() {
                 Total Spending
               </span>
               <span className="text-xl font-black text-slate-900 sm:text-2xl">
-                ₹ {formatAmount(auction?.total_sale_value ?? 2485500)}
+                ₹ {formatAmount(totalSpending)}
               </span>
             </div>
           </div>

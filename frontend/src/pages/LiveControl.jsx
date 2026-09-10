@@ -198,15 +198,17 @@ export default function LiveControl() {
   const [correctionTeamId, setCorrectionTeamId] = useState("");
   const [correctionPrice, setCorrectionPrice] = useState("");
   const [correctionReason, setCorrectionReason] = useState("");
+  const [maxBidMap, setMaxBidMap] = useState({});
 
   async function load() {
     try {
-      const [dash, p, t, snap, cats] = await Promise.all([
+      const [dash, p, t, snap, cats, mbRes] = await Promise.all([
         api.get(`/auctions/${auctionId}/dashboard`),
         api.get(`/players/auction/${auctionId}`),
         api.get(`/teams/auction/${auctionId}`),
         api.get(`/live/${auctionId}/snapshot`),
         api.get(`/auctions/${auctionId}/categories`).catch(() => ({ data: [] })),
+        api.get(`/live/${auctionId}/max-bid`).catch(() => ({ data: { maxBidMap: {} } })),
       ]);
 
       const nextState = snap.data.state || dash.data.state || null;
@@ -216,6 +218,7 @@ export default function LiveControl() {
       setCategories(cats.data || []);
       setSnapshot(snap.data);
       setState(nextState);
+      setMaxBidMap(mbRes.data?.maxBidMap || {});
       setBid(Number(nextState?.current_bid || nextState?.base_price || 0));
       setIncrement(Number(nextState?.current_bid_increment || dash.data.auction?.minimum_bid_increment || 100));
       setSelectionMode(nextState?.selection_mode || dash.data.auction?.next_player_selection_mode || "RANDOM");
@@ -870,21 +873,54 @@ export default function LiveControl() {
                 Currently Bidding Team
               </div>
 
-              {selectedTeam ? (
-                <div className="mt-2.5 flex items-center gap-3">
-                  <div className="flex h-10 w-12 shrink-0 items-center justify-center rounded-lg bg-[#8CC63F] text-xs font-black text-slate-950">
-                    {teamInitials(selectedTeam)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-black uppercase text-slate-900">
-                      {selectedTeam.team_name}
+              {selectedTeam ? (() => {
+                const tmb = maxBidMap[selectedTeam.id];
+                const maxBidVal = tmb?.max_bid ?? null;
+                const isBidOver = maxBidVal !== null && Number(bid || 0) > maxBidVal;
+                return (
+                  <div className="mt-2.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-12 shrink-0 items-center justify-center rounded-lg bg-[#8CC63F] text-xs font-black text-slate-950">
+                        {teamInitials(selectedTeam)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-base font-black uppercase text-slate-900">
+                          {selectedTeam.team_name}
+                        </div>
+                        <div className="text-xs font-black text-[#E5007D]">
+                          Balance: ₹{formatAmount(balanceOf(selectedTeam))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs font-black text-[#E5007D]">
-                      Remaining: ₹{formatAmount(balanceOf(selectedTeam))}
-                    </div>
+                    {maxBidVal !== null && (
+                      <div className={`mt-2.5 flex items-center justify-between rounded-lg px-3 py-2 text-xs font-black ${
+                        isBidOver
+                          ? "bg-red-100 border border-red-300 text-red-700"
+                          : maxBidVal === 0
+                          ? "bg-orange-100 border border-orange-300 text-orange-700"
+                          : "bg-slate-100 border border-slate-200 text-slate-700"
+                      }`}>
+                        <span className="uppercase tracking-wider">Max Bid</span>
+                        <span className={`text-sm font-black ${
+                          isBidOver ? "text-red-600" : maxBidVal === 0 ? "text-orange-600" : "text-emerald-600"
+                        }`}>
+                          {maxBidVal === 0 ? "LOCKED" : `₹${formatAmount(maxBidVal)}`}
+                        </span>
+                      </div>
+                    )}
+                    {isBidOver && (
+                      <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-red-600">
+                        ⚠ Current bid exceeds this team's max allowable bid!
+                      </div>
+                    )}
+                    {maxBidVal === 0 && !isBidOver && (
+                      <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-orange-600">
+                        ⚠ Team has no bidding capacity — purse reserved for remaining slots
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
+                );
+              })() : (
                 <div className="mt-1.5 text-xs font-semibold text-slate-500">
                   No team selected yet
                 </div>
@@ -937,14 +973,17 @@ export default function LiveControl() {
               <div className="max-h-[380px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
                 {filteredTeams.map((team, index) => {
                   const balance = balanceOf(team);
+                  const tmb = maxBidMap[team.id];
+                  const maxBidVal = tmb?.max_bid ?? null;
+                  const isSelected = String(teamId) === String(team.id);
                   return (
                     <button
                       key={team.id}
                       type="button"
                       onMouseEnter={() => setTeamCursor(index)}
                       onClick={() => selectTeam(team)}
-                      className={`grid w-full grid-cols-[45px_1fr_80px] items-center gap-2.5 border-b border-slate-100 px-3 py-2 text-left transition last:border-b-0 ${
-                        String(teamId) === String(team.id)
+                      className={`grid w-full grid-cols-[45px_1fr_90px] items-center gap-2.5 border-b border-slate-100 px-3 py-2 text-left transition last:border-b-0 ${
+                        isSelected
                           ? "bg-[#8CC63F] text-slate-950 font-bold"
                           : index === teamCursor
                           ? "bg-[#8CC63F]/15 text-slate-900"
@@ -960,7 +999,16 @@ export default function LiveControl() {
                           {team.owner_name || team.team_owner_name || "No Owner"}
                         </div>
                       </div>
-                      <div className="text-right text-xs font-black">₹{formatAmount(balance)}</div>
+                      <div className="text-right">
+                        <div className="text-xs font-black">₹{formatAmount(balance)}</div>
+                        {maxBidVal !== null && (
+                          <div className={`text-[9px] font-black uppercase ${
+                            maxBidVal === 0 ? "text-red-500" : "text-emerald-600"
+                          }`}>
+                            {maxBidVal === 0 ? "LOCKED" : `Max ₹${formatAmount(maxBidVal)}`}
+                          </div>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
