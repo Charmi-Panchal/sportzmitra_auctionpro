@@ -30,6 +30,7 @@ const emptyCategory = {
   base_price: 0,
   bid_increment: 100,
   display_order: 1,
+  max_players_per_team: 0,
 };
 
 const emptyForm = {
@@ -127,6 +128,7 @@ function buildPayload(form, organizationId) {
               category.bid_increment || form.minimum_bid_increment || 100
             ),
             display_order: Number(category.display_order || index + 1),
+            max_players_per_team: Number(category.max_players_per_team || 0),
           }))
           .filter((category) => category.category_name)
       : [],
@@ -730,6 +732,7 @@ function AuctionForm({
           base_price: 0,
           bid_increment: previous.minimum_bid_increment || 100,
           display_order: (previous.categories || []).length + 1,
+          max_players_per_team: 0,
         },
       ],
     }));
@@ -936,6 +939,7 @@ function AuctionForm({
                     <th className="py-2.5 pr-2">Base Price (₹)</th>
                     <th className="py-2.5 pr-2">Bid Increment (₹)</th>
                     <th className="py-2.5 pr-2">Order</th>
+                    <th className="py-2.5 pr-2">Max Players</th>
                     <th className="py-2.5 text-right">Action</th>
                   </tr>
                 </thead>
@@ -980,6 +984,20 @@ function AuctionForm({
                             updateCategory(
                               index,
                               "display_order",
+                              e.target.value
+                            )
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs"
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          type="number"
+                          value={category.max_players_per_team || 0}
+                          onChange={(e) =>
+                            updateCategory(
+                              index,
+                              "max_players_per_team",
                               e.target.value
                             )
                           }

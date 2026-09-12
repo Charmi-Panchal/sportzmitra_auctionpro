@@ -5,6 +5,7 @@ const { checkAuctionAccess } = require("../middleware/accessMiddleware");
 const { mapPublicSnapshot } = require("../utils/spResults");
 const { sendError } = require("../utils/errors");
 const { emitAuctionSnapshot } = require("../socket");
+const { calculateMaxBids, getTeamMaxBid } = require("../utils/maxBid");
 
 const router = express.Router();
 
@@ -408,6 +409,18 @@ router.patch(
         );
         if (!team) throw new Error("Team not found");
         if (bidAmount > Number(team.remaining_purse || 0)) throw new Error("Bid exceeds team remaining purse");
+
+        // Max bid validation — ensures team can still afford remaining required players
+        const currentPlayerForMaxBid = player ? { base_price: player.base_price, category: null } : null;
+        if (currentPlayerForMaxBid) {
+          // Fetch current player category from state
+          const [[st]] = await conn.query(`SELECT p.category FROM players p WHERE p.id = ?`, [playerId]);
+          if (st) currentPlayerForMaxBid.category = st.category;
+        }
+        const teamMaxBid = await getTeamMaxBid(pool, auctionId, teamId, currentPlayerForMaxBid);
+        if (teamMaxBid > 0 && bidAmount > teamMaxBid) {
+          throw new Error(`Bid of ₹${bidAmount.toLocaleString('en-IN')} exceeds max allowed bid of ₹${teamMaxBid.toLocaleString('en-IN')} for this team`);
+        }
       }
 
       await conn.query(
@@ -488,6 +501,43 @@ router.get(
       res.json(mapPublicSnapshot(resultSets));
     } catch (error) {
       console.error("snapshot error", error);
+      sendError(res, error);
+    }
+  }
+);
+
+// ── Max Bid ─────────────────────────────────────────────────────────────────
+router.get(
+  "/:auctionId/max-bid",
+  authMiddleware,
+  requireRole("AUCTION_ADMIN", "SUPER_ADMIN"),
+  checkAuctionAccess("auctionId"),
+  async (req, res) => {
+    try {
+      const auctionId = Number(req.params.auctionId);
+
+      // Get the current active player from auction_state (if any)
+      const [[stateRow]] = await pool.query(
+        `SELECT s.current_player_id, p.base_price, p.category
+         FROM auction_state s
+         LEFT JOIN players p ON p.id = s.current_player_id
+         WHERE s.auction_id = ?`,
+        [auctionId]
+      );
+
+      const currentPlayer = stateRow?.current_player_id
+        ? { base_price: stateRow.base_price, category: stateRow.category }
+        : null;
+
+      const maxBids = await calculateMaxBids(pool, auctionId, currentPlayer);
+
+      // Return as both array and map keyed by team_id for convenience
+      const maxBidMap = {};
+      for (const entry of maxBids) maxBidMap[entry.team_id] = entry;
+
+      res.json({ maxBids, maxBidMap });
+    } catch (error) {
+      console.error("max-bid error", error);
       sendError(res, error);
     }
   }

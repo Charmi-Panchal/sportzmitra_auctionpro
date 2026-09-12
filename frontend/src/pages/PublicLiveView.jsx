@@ -42,6 +42,7 @@ export default function PublicLiveView() {
   const { publicSlug } = useParams();
   const [auction, setAuction] = useState(null);
   const [state, setState] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [celebration, setCelebration] = useState(null);
 
@@ -63,6 +64,7 @@ export default function PublicLiveView() {
     try {
       setLoading(true);
       const response = await api.get(`/public/auction/${publicSlug}`);
+      setSnapshot(response.data);
       setAuction(response.data.auction || null);
       setState(response.data.state || null);
     } catch (error) {
@@ -83,6 +85,7 @@ export default function PublicLiveView() {
 
     const handleSnapshotUpdated = (payload) => {
       if (payload?.auction?.id === auction.id || payload?.auctionId === auction.id) {
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
         if (payload.state) setState(payload.state);
       }
@@ -99,6 +102,7 @@ export default function PublicLiveView() {
           return payload.state || prev;
         });
         setTimeout(() => setCelebration(null), 2500);
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
       }
     };
@@ -107,6 +111,7 @@ export default function PublicLiveView() {
       if (payload?.auction?.id === auction.id || payload?.auctionId === auction.id) {
         setCelebration({ type: "UNSOLD" });
         setTimeout(() => setCelebration(null), 2000);
+        setSnapshot(payload);
         if (payload.auction) setAuction(payload.auction);
         if (payload.state) setState(payload.state);
       }

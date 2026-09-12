@@ -52,9 +52,9 @@ router.get("/auction/:auctionId/reports/team-summary", async (req, res) => {
          t.team_name,
          t.owner_name,
          t.logo_url,
-         t.total_purse,
+         (t.remaining_purse + COALESCE(SUM(p.sold_price), 0)) AS total_purse,
          t.remaining_purse,
-         (t.total_purse - t.remaining_purse) AS used_amount,
+         COALESCE(SUM(p.sold_price), 0) AS used_amount,
          COUNT(p.id) AS players_purchased,
          t.remaining_purse AS max_bid_allowed
        FROM teams t

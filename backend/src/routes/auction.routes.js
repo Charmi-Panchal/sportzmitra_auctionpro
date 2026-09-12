@@ -76,6 +76,7 @@ function normalizeCategories(rawCategories) {
       base_price: Number(item.base_price || 0),
       bid_increment: item.bid_increment === "" || item.bid_increment == null ? null : Number(item.bid_increment),
       display_order: Number(item.display_order || item.order || index + 1),
+      max_players_per_team: Number(item.max_players_per_team || 0),
     }))
     .filter((item) => item.category_name);
 }
@@ -92,15 +93,16 @@ async function saveAuctionCategories(conn, auctionId, categories, isCategoryWise
   for (const category of normalized) {
     await conn.query(
       `INSERT INTO auction_categories
-       (auction_id, category_name, display_order, base_price, bid_increment, status)
-       VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+       (auction_id, category_name, display_order, base_price, bid_increment, max_players_per_team, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')
        ON DUPLICATE KEY UPDATE
          display_order = VALUES(display_order),
          base_price = VALUES(base_price),
          bid_increment = VALUES(bid_increment),
+         max_players_per_team = VALUES(max_players_per_team),
          status = 'ACTIVE',
          updated_at = NOW()`,
-      [auctionId, category.category_name, category.display_order, category.base_price, category.bid_increment]
+      [auctionId, category.category_name, category.display_order, category.base_price, category.bid_increment, category.max_players_per_team]
     );
   }
 }
